@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <title>Mutiara Hati Smart Absensi</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  
+  <style>
+    /* STYLE DASAR */
+    :root { --primary: #2979ff; --success: #00e676; --danger: #ff1744; --warning: #ffea00; --dark: #121212; --card: #1e1e1e; --text: #ffffff; --text-muted: #b0b0b0; }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { font-family: 'Outfit', sans-serif; background-color: var(--dark); color: var(--text); margin: 0; padding: 0; padding-bottom: 90px; }
+    
+    .header { background: rgba(30, 30, 30, 0.8); backdrop-filter: blur(10px); padding: 15px 20px; position: sticky; top: 0; z-index: 100; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; }
+    .header h1 { margin: 0; font-size: 1.2rem; background: linear-gradient(45deg, #2979ff, #00e676); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    
+    .status-badge { font-size: 0.75rem; padding: 6px 12px; border-radius: 20px; font-weight: bold; display: flex; align-items: center; gap: 6px; }
+    .online { background: rgba(0, 230, 118, 0.15); color: var(--success); border: 1px solid rgba(0, 230, 118, 0.3); }
+    .offline { background: rgba(255, 23, 68, 0.15); color: var(--danger); border: 1px solid rgba(255, 23, 68, 0.3); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(0, 230, 118, 0.7); } 70% { box-shadow: 0 0 0 6px rgba(0, 230, 118, 0); } 100% { box-shadow: 0 0 0 0 rgba(0, 230, 118, 0); } }
+
+    .container { padding: 20px; max-width: 600px; margin: 0 auto; }
+    .card { background: var(--card); border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); border: 1px solid #333; }
+    .card-title { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+
+    /* INPUT RANGE */
+    .date-group { display: flex; gap: 10px; margin-bottom: 10px; }
+    .date-input { flex: 1; }
+    .date-label { font-size: 0.75rem; color: #888; margin-bottom: 4px; display: block; }
+
+    .monitor-box { text-align: center; padding: 20px 0; }
+    .monitor-text { font-size: 1.8rem; font-weight: 700; transition: color 0.3s; }
+    .last-absen { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 1px solid #333; }
+    .user-avatar { width: 40px; height: 40px; background: #333; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+
+    input, select { width: 100%; padding: 14px; margin: 5px 0; background: #2a2a2a; border: 1px solid #444; border-radius: 12px; color: white; font-size: 1rem; outline: none; }
+    button { width: 100%; padding: 14px; border: none; border-radius: 12px; font-weight: 700; font-size: 1rem; cursor: pointer; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-warning { background: var(--warning); color: black; }
+    .btn-icon { width: auto; padding: 8px 12px; font-size: 0.9rem; margin: 0; }
+
+    /* CUSTOM CHECKBOX */
+    .checkbox-wrapper { display: flex; align-items: center; margin-right: 15px; }
+    input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer; }
+
+    /* TOOLBAR DI ATAS LIST (BARU) */
+    .list-toolbar { 
+      background: #252525; padding: 10px 15px; border-radius: 12px; 
+      display: none; justify-content: space-between; align-items: center; 
+      margin-bottom: 15px; border: 1px solid #444;
+    }
+    .list-toolbar.visible { display: flex; }
+    
+    .toolbar-left { display: flex; align-items: center; gap: 10px; }
+    .toolbar-right { display: flex; align-items: center; gap: 10px; }
+    
+    .delete-action-btn { 
+      background: var(--danger); color: white; padding: 6px 15px; 
+      border-radius: 20px; font-size: 0.8rem; cursor: pointer; border: none;
+      display: none; /* Hidden by default */
+      animation: fadeIn 0.2s;
+    }
+    .delete-action-btn.show { display: block; }
+
+    /* ITEM RIWAYAT */
+    .history-item { display: flex; align-items: center; padding: 15px; background: #252525; border-radius: 12px; margin-bottom: 10px; border-left: 5px solid #444; transition: 0.2s; }
+    .history-item.selected { background: #333; border-left-color: var(--primary) !important; border: 1px solid var(--primary); }
+    .history-item.ontime { border-left-color: var(--success); }
+    .history-item.late { border-left-color: var(--danger); }
+    
+    .h-content { flex: 1; display: flex; justify-content: space-between; align-items: center; }
+    .h-info { display: flex; flex-direction: column; }
+    .h-date { font-size: 0.7rem; color: #888; margin-bottom: 2px; }
+    .h-name { font-weight: bold; font-size: 1.1rem; }
+    .h-status { font-size: 0.75rem; margin-top: 4px; padding: 2px 6px; border-radius: 4px; display: inline-block; width: fit-content; }
+    .bg-late { background: rgba(255, 23, 68, 0.2); color: #ff8a80; }
+    .bg-ontime { background: rgba(0, 230, 118, 0.2); color: #b9f6ca; }
+    .h-time { font-size: 1.3rem; font-weight: bold; color: var(--primary); text-align: right; }
+
+    .list-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #333; }
+    .navbar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(30, 30, 30, 0.95); backdrop-filter: blur(10px); display: flex; justify-content: space-around; padding: 12px 0; border-top: 1px solid #333; z-index: 100; }
+    .nav-item { color: var(--text-muted); text-align: center; font-size: 0.7rem; cursor: pointer; transition: 0.3s; flex: 1; }
+    .nav-item i { font-size: 1.4rem; display: block; margin-bottom: 4px; }
+    .nav-item.active { color: var(--primary); transform: translateY(-2px); }
+    
+    #toast-container { position: fixed; bottom: 150px; left: 50%; transform: translateX(-50%); z-index: 200; width: 90%; max-width: 400px; text-align:center;}
+    .toast { background: #333; color: white; padding: 12px 20px; border-radius: 50px; box-shadow: 0 5px 20px rgba(0,0,0,0.5); display: inline-block; margin-top:10px;}
+
+    .page { display: none; animation: fadeIn 0.3s; }
+    .page.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>Mutiara Hati</h1>
+    <div id="connectionStatus" class="status-badge offline"><div class="dot"></div> <span id="connText">OFFLINE</span></div>
+  </div>
+
+  <div class="container">
+    <div id="home" class="page active">
+      <div class="card">
+        <div class="card-title">Monitor Langsung</div>
+        <div class="monitor-box"><div id="statusAlat" class="monitor-text" style="color: var(--warning);">Menunggu...</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Absensi Terakhir</div>
+        <div class="last-absen">
+          <div style="display:flex; align-items:center; gap:15px;">
+            <div class="user-avatar">👤</div>
+            <div>
+              <div id="lastUser" style="font-size:1.2rem; font-weight:bold;">-</div>
+              <div style="font-size:0.8rem; color:#888;">Guru / Karyawan</div>
+            </div>
+          </div>
+          <div id="lastTime" style="font-size:1.5rem; color:var(--primary); font-weight:bold;">--:--</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="history" class="page">
+      <div class="card">
+        <div class="card-title">Filter Rentang Tanggal</div>
+        <div class="date-group">
+          <div class="date-input">
+            <span class="date-label">Dari Tanggal</span>
+            <input type="date" id="startDate">
+          </div>
+          <div class="date-input">
+            <span class="date-label">Sampai Tanggal</span>
+            <input type="date" id="endDate">
+          </div>
+        </div>
+        <button class="btn-primary" onclick="loadHistoryRange()"><i class="fas fa-search"></i> Tampilkan Data</button>
+      </div>
+      
+      <div id="listToolbar" class="list-toolbar">
+        <div class="toolbar-left">
+          <input type="checkbox" id="masterCheckbox" onchange="toggleSelectAll()">
+          <span style="font-weight:bold; font-size:0.9rem;">Pilih Semua</span>
+        </div>
+        <div class="toolbar-right">
+          <span id="countText" style="font-size:0.8rem; color:#888;">0 Data</span>
+          <button id="btnBulkDelete" class="delete-action-btn" onclick="hapusTerpilih()">
+            <i class="fas fa-trash"></i> HAPUS
+          </button>
+        </div>
+      </div>
+
+      <div id="historyResult"></div>
+    </div>
+
+    <div id="users" class="page">
+      <div class="card">
+        <div class="card-title">Daftar Guru</div>
+        <div id="userList"><p style="text-align:center; color:#555;">Memuat...</p></div>
+      </div>
+      <div class="card" style="border: 1px solid var(--danger);">
+        <div class="card-title" style="color:var(--danger);">⚠️ ZONA BAHAYA</div>
+        <div style="display:flex; gap:10px;">
+          <input type="number" id="delID" placeholder="ID (Cth: 5)">
+          <button class="btn-warning btn-icon" onclick="hapusUserAlat()"><i class="fas fa-trash"></i></button>
+        </div>
+        <hr style="border-color:#333; margin:20px 0;">
+        <button class="btn-danger" onclick="hapusSemuaDatabase()"><i class="fas fa-bomb"></i> FORMAT SEMUA DATA</button>
+      </div>
+    </div>
+
+    <div id="register" class="page">
+      <div class="card">
+        <div class="card-title">Registrasi Jari Baru</div>
+        <div style="text-align:center; margin-bottom:20px;">
+          <i class="fas fa-fingerprint" style="font-size:3rem; color:var(--primary);"></i>
+        </div>
+        <input type="text" id="regNama" placeholder="Nama Lengkap">
+        <input type="number" id="regID" placeholder="ID Angka (Unik)">
+        <button class="btn-primary" onclick="prosesDaftar()">Mulai Daftar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+
+  <div class="navbar">
+    <div class="nav-item active" onclick="switchPage('home', this)"><i class="fas fa-home"></i> Home</div>
+    <div class="nav-item" onclick="switchPage('history', this)"><i class="fas fa-history"></i> Riwayat</div>
+    <div class="nav-item" onclick="switchPage('users', this)"><i class="fas fa-users"></i> Guru</div>
+    <div class="nav-item" onclick="switchPage('register', this)"><i class="fas fa-user-plus"></i> Daftar</div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, onValue, set, query, limitToLast, remove, get } 
+      from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAaMD5A-0SgVLxDT5xhE4ypIP55_iwXwXA",
+      authDomain: "absensi-mutiara.firebaseapp.com",
+      databaseURL: "https://absensi-mutiara-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "absensi-mutiara",
+      storageBucket: "absensi-mutiara.firebasestorage.app",
+      messagingSenderId: "91272309916",
+      appId: "1:91272309916:web:6951c2bbeaadaeffe61159"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // VAR GLOBAL UNTUK SELECTION
+    window.selectedItems = [];
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('startDate').value = today;
+      document.getElementById('endDate').value = today;
+    });
+
+    window.switchPage = function(pageId, el) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById(pageId).classList.add('active');
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      el.classList.add('active');
+      if(pageId === 'users') loadUserList();
+      if(pageId === 'history') loadHistoryRange();
+    }
+
+    // --- LOGIKA RIWAYAT ---
+    window.loadHistoryRange = async function() {
+      const startStr = document.getElementById('startDate').value;
+      const endStr = document.getElementById('endDate').value;
+      const container = document.getElementById('historyResult');
+      
+      // Reset
+      window.selectedItems = [];
+      updateToolbar();
+      document.getElementById('masterCheckbox').checked = false;
+      document.getElementById('listToolbar').classList.remove('visible');
+
+      if(!startStr || !endStr) { showToast("Pilih tanggal dulu!", 'error'); return; }
+
+      container.innerHTML = `<div style="text-align:center; padding:20px; color:#888;"><i class="fas fa-spinner fa-spin"></i> Memuat data...</div>`;
+
+      let startDate = new Date(startStr);
+      let endDate = new Date(endStr);
+      let allData = [];
+
+      for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        let dateKey = d.toISOString().split('T')[0];
+        try {
+          const snapshot = await get(ref(db, 'riwayat/' + dateKey));
+          if (snapshot.exists()) {
+            snapshot.forEach(child => {
+              allData.push({ key: child.key, date: dateKey, ...child.val() });
+            });
+          }
+        } catch (e) { console.log(e); }
+      }
+
+      if (allData.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding:20px; color:#666;">Tidak ada data.</div>`;
+        return;
+      }
+
+      allData.sort((a, b) => {
+        if (a.date !== b.date) return b.date.localeCompare(a.date);
+        return b.jam.localeCompare(a.jam);
+      });
+
+      // Show Toolbar
+      document.getElementById('listToolbar').classList.add('visible');
+      document.getElementById('countText').innerText = allData.length + " Total";
+
+      let html = "";
+      allData.forEach(item => {
+        let statusText = item.status || "TEPAT WAKTU";
+        let borderClass = (statusText === "TERLAMBAT") ? "late" : "ontime";
+        let bgClass = (statusText === "TERLAMBAT") ? "bg-late" : "bg-ontime";
+        let icon = (statusText === "TERLAMBAT") ? "fa-exclamation-circle" : "fa-check-circle";
+        let tgl = item.date.split('-').reverse().join('/');
+        let val = item.date + "|" + item.key;
+
+        html += `
+        <div class="history-item ${borderClass}" id="row-${item.key}">
+          <div class="checkbox-wrapper">
+             <input type="checkbox" class="item-cb" value="${val}" onchange="toggleItem(this)">
+          </div>
+          <div class="h-content">
+            <div class="h-info">
+              <div class="h-date"><i class="far fa-calendar-alt"></i> ${tgl}</div>
+              <div class="h-name">${item.nama}</div>
+              <div class="h-status ${bgClass}"><i class="fas ${icon}"></i> ${statusText}</div>
+            </div>
+            <div class="h-time">${item.jam}</div>
+          </div>
+        </div>`;
+      });
+      container.innerHTML = html;
+    }
+
+    // --- LOGIKA BULK DELETE (DENGAN TOOLBAR DI ATAS) ---
+    window.toggleItem = function(cb) {
+      const val = cb.value;
+      if(cb.checked) {
+        window.selectedItems.push(val);
+        cb.closest('.history-item').classList.add('selected');
+      } else {
+        window.selectedItems = window.selectedItems.filter(item => item !== val);
+        cb.closest('.history-item').classList.remove('selected');
+      }
+      updateToolbar();
+    }
+
+    window.toggleSelectAll = function() {
+      const isChecked = document.getElementById('masterCheckbox').checked;
+      const checkboxes = document.querySelectorAll('.item-cb');
+      window.selectedItems = [];
+      
+      checkboxes.forEach(cb => {
+        cb.checked = isChecked;
+        if(isChecked) {
+          window.selectedItems.push(cb.value);
+          cb.closest('.history-item').classList.add('selected');
+        } else {
+          cb.closest('.history-item').classList.remove('selected');
+        }
+      });
+      updateToolbar();
+    }
+
+    function updateToolbar() {
+      const count = window.selectedItems.length;
+      const btn = document.getElementById('btnBulkDelete');
+      const txt = document.getElementById('countText');
+      
+      if(count > 0) {
+        btn.classList.add('show');
+        txt.innerText = count + " Dipilih";
+      } else {
+        btn.classList.remove('show');
+        // Balikin ke total data (perlu ambil dari list sebenernya, tapi gpp)
+        txt.innerText = "0 Dipilih"; 
+      }
+    }
+
+    window.hapusTerpilih = async function() {
+      const count = window.selectedItems.length;
+      if(count === 0) return;
+      
+      if(confirm(`Yakin ingin menghapus ${count} data ini?`)) {
+        showToast("Sedang menghapus...", 'info');
+        
+        const deletePromises = window.selectedItems.map(val => {
+          const [date, key] = val.split('|');
+          return remove(ref(db, 'riwayat/' + date + '/' + key));
+        });
+
+        await Promise.all(deletePromises);
+        showToast("Berhasil dihapus!", 'success');
+        loadHistoryRange(); 
+      }
+    }
+
+    // USER LIST
+    window.loadUserList = function() {
+      const listDiv = document.getElementById('userList');
+      get(ref(db, 'users')).then((snap) => {
+        if(!snap.exists()) { listDiv.innerHTML = `<div style="text-align:center; padding:10px; color:#666;">Data Kosong.</div>`; return; }
+        let html = "";
+        snap.forEach(child => {
+          const u = child.val();
+          html += `<div class="list-item"><div><span style="font-weight:bold;">${u.nama}</span> <span style="color:#666; font-size:0.8rem;">(ID: ${u.id})</span></div><button class="btn-warning btn-icon" onclick="hapusUserDirect('${u.id}', '${u.nama}')"><i class="fas fa-trash"></i></button></div>`;
+        });
+        listDiv.innerHTML = html;
+      });
+    }
+
+    // REALTIME STATUS
+    let lastHeartbeatTime = 0;
+    onValue(ref(db, 'heartbeat'), () => { lastHeartbeatTime = Date.now(); updateStatusDisplay(true); });
+    setInterval(() => { if (Date.now() - lastHeartbeatTime > 12000) updateStatusDisplay(false); }, 2000);
+    function updateStatusDisplay(isOnline) {
+      const el = document.getElementById('connectionStatus');
+      const txt = document.getElementById('connText');
+      if(isOnline) { el.className = "status-badge online"; txt.innerText = "ONLINE"; } 
+      else { el.className = "status-badge offline"; txt.innerText = "OFFLINE"; }
+    }
+    onValue(ref(db, 'status_alat'), (snap) => {
+      const msg = snap.val() || "Menunggu...";
+      const el = document.getElementById('statusAlat');
+      el.innerText = msg;
+      if(msg.includes("SUKSES") || msg.includes("BERHASIL")) el.style.color = "var(--success)";
+      else if(msg.includes("GAGAL")) el.style.color = "var(--danger)";
+      else el.style.color = "var(--warning)";
+    });
+    onValue(ref(db, 'status'), (snap) => { const d = snap.val(); if(d) { document.getElementById('lastUser').innerText = d.terakhir_nama; document.getElementById('lastTime').innerText = d.terakhir_jam.substring(0, 5); } });
+    onValue(ref(db, 'notif_kecil'), (snap) => { const d = snap.val(); if(d && d.pesan) showToast(d.pesan, d.pesan.includes("✅") ? 'success' : 'info'); });
+
+    // HELPERS
+    function showToast(msg, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      let icon = type === 'success' ? 'check-circle' : 'info-circle';
+      toast.innerHTML = `<i class="fas fa-${icon}"></i> ${msg}`;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    }
+    window.prosesDaftar = function() {
+      const nama = document.getElementById('regNama').value;
+      const id = document.getElementById('regID').value;
+      if(!nama || !id) { showToast("Isi Lengkap!", 'error'); return; }
+      set(ref(db, 'perintah'), { mode: "DAFTAR", id: parseInt(id), nama: nama });
+      set(ref(db, 'users/' + id), { nama: nama, id: parseInt(id) });
+      showToast("Perintah Dikirim!", 'success');
+      switchPage('home', document.querySelectorAll('.nav-item')[0]);
+    }
+    window.hapusUserDirect = function(id, nama) { if(confirm(`Hapus ${nama}?`)) { set(ref(db, 'perintah'), { mode: "HAPUS", id: parseInt(id) }); remove(ref(db, 'users/'+id)); showToast("Dihapus", 'success'); loadUserList(); } }
+    window.hapusUserAlat = function() { const id = document.getElementById('delID').value; if(confirm("Hapus ID "+id+"?")) { set(ref(db, 'perintah'), { mode: "HAPUS", id: parseInt(id) }); remove(ref(db, 'users/'+id)); showToast("Dihapus", 'success'); loadUserList(); } }
+    window.hapusSemuaDatabase = function() { if(confirm("⚠️ FORMAT TOTAL SEMUA DATA?")) { set(ref(db, 'perintah'), { mode: "HAPUS_SEMUA" }); showToast("Melakukan Reset...", 'error'); } }
+  </script>
+</body>
+</html>
